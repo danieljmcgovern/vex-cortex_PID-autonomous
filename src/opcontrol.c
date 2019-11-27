@@ -28,19 +28,20 @@
  */
 
  //sets the value of all four drive motors with one argument
- /*
  void setMotorPower (int power){
  	motorSet(1, power);
  	motorSet(2, power);
  	motorSet(3, -power);
  	motorSet(4, -power);
-}]*/
+}
 
 void operatorControl() {
-//For X control loop
-float P_X = 0;
+//control loop variables, these variables are updated each loop to control motors
+//X control loop variables
+float P_X = 0;    //
 float I_X = 0;
 float Error_X = 0;
+float output_X = 0;
 
 //For Y control loop
 float P_Y = 0;
@@ -52,22 +53,49 @@ float P_Angle = 0;
 float I_Angle = 0;
 float Error_Angle = 0;
 
+//target positions
 float set_point_X = 30.0;
 float set_point_Y = 30.0;
 float set_point_Angle = 0;
-float
+
+//proportionality constants scale error term to motor output
+float kP_y = 8;
+float kP_x = 2.0;
+float kI_x = 0.0001;
+float I_X_UPPER_LIMIT = 185000.0;
+float I_X_LOWER_LIMIT = -185000.0;
+
+//kill loop bools
+bool is_kill_toggle_pressed = false;
+bool is_dead = true;
+
+
 while (true){
 
-	//kill button, motors set to zero while holding down 8U
-	if (joystickGetDigital(1, 8, JOY_UP)){
-		setMotorPower(0);
-		//When continue statement is encountered in loop, control jumps to beginning of loop
-		//ie keep checking if 8U is still pressed
-		continue;
-	}
-	//frong right ultrasonic sensor integer value cast to float, saved to varialbe
+
+	//when 8U is pressed to kill
+if (is_kill_toggle_pressed && !joystickGetDigital(1, 8, JOY_UP)) {
+    is_kill_toggle_pressed = false;
+    is_dead = !is_dead;  //cf recursion
+    if (is_dead){
+      setMotorPower(0);
+    }
+  }
+
+//when 8U is first pressed...
+if (!is_kill_toggle_pressed && joystickGetDigital(1, 8, JOY_UP)) {
+  is_kill_toggle_pressed = true;
+}
+
+//if it's dead (is_dead is true) go to start of while loop
+if (is_dead){
+  delay(20);
+  continue;
+}
+
+	//ultrasonic sensor integer value cast to float, saved to varialbe
   //Sensor values are a unitless number representing distance
-  //TODO Convert sensor data to some unit we can use
+  //TODO Convert sensor data to some unit we can use, default is cm
 	float sensor_x1 = (float) ultrasonicGet(frontRight);
 
   float sensor_x2 = (float) ultrasonicGet(frontLeft);
@@ -79,46 +107,52 @@ while (true){
 	while it is pinging and waiting for a response, -1 is returned*/
   //TODO consider instead of waiting 5ms for another reading, set
   //the sensor value to the previous reading.
-	if(sensor_x == -1.0 || sensor_x2 == -1.0 || sensor_Y1 == -1.0) {
+  /*
+	if(sensor_x1 == -1.0 || sensor_x2 == -1.0 || sensor_y1 == -1.0) {
 		delay (5);
 		continue;
 	}
+  */
 
- //Get error values
+ //Get error values //TODO need a target angle
+ //error term, difference between target and sensed value
  Error_Angle = sensor_x1 - sensor_x2;
- float Yerror = sensor_y1 - 40;
- float kp2 = 8;
- float P2 = angleError * kp2;
- float kp1 = 2.0;
- float ki1 = 0.0001;
-	//error term, difference between target and present location
-	float error1 = set_point1 - sensor_x;
-  float P1 = error1*kp1;
-  I1 = I1 + error1;
-  if(I1 >= 185000) {
-    I1 = 185000;
-  } else if(I1 <= -185000) {
-    I1 = -185000;
+
+ Error_Y = sensor_y1 - set_point_Y;
+
+ Error_X = sensor_x1 - set_point_X;
+
+	//
+  P_X = Error_X*kP_x;
+  //integral term for X, accumulates errors over time
+  I_X = I_X + Error_X;
+  if(I_X >= I_X_UPPER_LIMIT) {
+    I_X = I_X_UPPER_LIMIT;
+  } else if(I_X <= I_X_LOWER_LIMIT) {
+    I_X = I_X_LOWER_LIMIT;
   }
 
+ output_X = (P_X + (I_X*kI_x));
+/*
   float Kp3 = 1.25;
   float P3 = Yerror *Kp3;
   float output1 = P1 + (I1*ki1);
   float output2 = P2;
   float output3 = P3;
+  */
 
-
+/*
   motorSet(1, output1 + output2   + output3);
   motorSet(2, -output1 + output2  + output3);
   motorSet(3, output1 - output2  + output3);
   motorSet(4, -output1 - output2  + output3);
-
-  /*
-  motorSet(1, output3);
-  motorSet(2, output3);
-  motorSet(3, output3);
-  motorSet(4, output3);
 */
+
+  motorSet(1, output_X);
+  motorSet(2, output_X);
+  motorSet(3, -output_X);
+  motorSet(4, -output_X);
+
  delay(5);
 	//constant of proportionality, scales error term to acceptable motor input
 
