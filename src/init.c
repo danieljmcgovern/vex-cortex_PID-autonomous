@@ -36,6 +36,7 @@ void initializeIO() {
  */
 void initialize() {
   //initialize ultrasonic sensors  (portEcho, portPing)
+sideRight = ultrasonicInit(2, 1);
 frontRight = ultrasonicInit(4, 3);
 frontLeft = ultrasonicInit(6, 5);
 
