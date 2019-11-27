@@ -28,15 +28,34 @@
  */
 
  //sets the value of all four drive motors with one argument
+ /*
  void setMotorPower (int power){
  	motorSet(1, power);
  	motorSet(2, power);
  	motorSet(3, -power);
  	motorSet(4, -power);
- }
+}]*/
 
 void operatorControl() {
-float I1 = 0;
+//For X control loop
+float P_X = 0;
+float I_X = 0;
+float Error_X = 0;
+
+//For Y control loop
+float P_Y = 0;
+float I_Y = 0;
+float Error_Y = 0;
+
+//For angle control loop
+float P_Angle = 0;
+float I_Angle = 0;
+float Error_Angle = 0;
+
+float set_point_X = 30.0;
+float set_point_Y = 30.0;
+float set_point_Angle = 0;
+float
 while (true){
 
 	//kill button, motors set to zero while holding down 8U
@@ -46,32 +65,27 @@ while (true){
 		//ie keep checking if 8U is still pressed
 		continue;
 	}
-
-	//target point, how far from wall bot should station keep
-	float set_point1 = 30.0;
 	//frong right ultrasonic sensor integer value cast to float, saved to varialbe
-	float sensor_x = (float) ultrasonicGet(frontRight);
+  //Sensor values are a unitless number representing distance
+  //TODO Convert sensor data to some unit we can use
+	float sensor_x1 = (float) ultrasonicGet(frontRight);
 
   float sensor_x2 = (float) ultrasonicGet(frontLeft);
 
   float sensor_y1 = (float) ultrasonicGet(sideRight);
+
 	//ignore negative one from ultrasonic (ie all negative values)
 	/*If no object was found or if the ultrasonic sensor is polled
 	while it is pinging and waiting for a response, -1 is returned*/
-	if(sensor_x == -1.0) {
+  //TODO consider instead of waiting 5ms for another reading, set
+  //the sensor value to the previous reading.
+	if(sensor_x == -1.0 || sensor_x2 == -1.0 || sensor_Y1 == -1.0) {
 		delay (5);
 		continue;
 	}
 
-  if(sensor_x2 == -1.0) {
-		delay (5);
-		continue;
-	}
-  if(sensor_y1 == -1.0) {
-   delay (5);
-   continue;
- }
- float angleError = sensor_x - sensor_x2;
+ //Get error values
+ Error_Angle = sensor_x1 - sensor_x2;
  float Yerror = sensor_y1 - 40;
  float kp2 = 8;
  float P2 = angleError * kp2;
